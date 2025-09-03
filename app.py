@@ -6,7 +6,7 @@ import streamlit as st
 openai.api_key = "YOUR_OPENAI_API_KEY"
 
 # Load tasks from Excel
-tasks_df = pd.read_excel("tasks.xlsx")
+tasks_df = pd.read_excel("Task List.xlsx")
 
 # Simple Agent Function
 def simple_agent(task):
@@ -52,3 +52,4 @@ for idx, row in tasks_df.iterrows():
             st.warning("Unknown action.")
     except Exception as e:
         st.error(f"Error: {e}")
+
