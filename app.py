@@ -4,7 +4,7 @@ from datetime import datetime
 import re
 
 # Load tasks from Excel
-tasks_df = pd.read_excel("tasks.xlsx")
+tasks_df = pd.read_excel("Task List.xlsx")
 
 st.title("Dynamic Agentic AI POC (No OpenAI)")
 
@@ -48,3 +48,4 @@ if user_prompt:
     output_results = simple_agent(user_prompt, task_dict)
     for res in output_results:
         st.write(res)
+
