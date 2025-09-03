@@ -1,57 +1,94 @@
 import streamlit as st
 import pandas as pd
-import openai
-import os
+from openai import OpenAI
+from datetime import datetime
 
-# Load tasks from Excel
+st.title("Dynamic Agentic AI POC (New OpenAI API)")
+
+# --- Load tasks dynamically from Excel ---
 tasks_df = pd.read_excel("Task List.xlsx")
 task_dict = {row["S.No"]: row["Task"] for idx, row in tasks_df.iterrows()}
 
-# Let user select tasks
+# --- Streamlit multiselect to choose tasks ---
 selected_tasks = st.multiselect(
     "Select tasks to execute:",
     options=[f"{no}: {task}" for no, task in task_dict.items()]
 )
 
-# Set OpenAI API key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# --- Initialize OpenAI client ---
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def interpret_task(task_description):
+# --- Placeholder tool functions ---
+def read_table(table_name):
+    return pd.DataFrame({"col1": [1,2,3], "col2": ["A","B","C"]})
+
+def join_tables(table1, table2):
+    return pd.DataFrame({"joined_col": [1,2,3]})
+
+def display_message(msg):
+    return msg
+
+# --- GPT-based task interpreter ---
+def interpret_task(task_text):
     """
-    Use GPT-5-mini to interpret the task description and determine the required action.
+    Uses GPT-5-mini to decide what action to perform for a given task description.
     """
-    prompt = f"Interpret the following task description and determine the required action:\n\n{task_description}\n\nAction:"
-    response = openai.Completion.create(
+    prompt = f"""
+    You are an agent. The user provides the following task description:
+    \"\"\"{task_text}\"\"\"
+    
+    Decide what action to perform and provide it as a JSON with:
+    {{
+      "action": "<action_name>",   # e.g., read_table, join_tables, display_message
+      "parameters": "<any_parameters_needed>"
+    }}
+    """
+    
+    response = client.chat.completions.create(
         model="gpt-5-mini",
-        prompt=prompt,
-        temperature=0,
-        max_tokens=100
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
     )
-    action = response.choices[0].text.strip()
-    return action
+    
+    # GPT output as string
+    action_text = response.choices[0].message.content.strip()
+    
+    try:
+        # Convert GPT output to dictionary safely
+        import json
+        action_dict = json.loads(action_text)
+        return action_dict
+    except:
+        # Fallback if GPT output is not valid JSON
+        return {"action": "display_message", "parameters": task_text}
 
-def execute_action(action):
-    """
-    Execute the action determined by GPT-5-mini.
-    """
-    if "read table" in action:
-        # Placeholder for reading a table
-        return "Reading table..."
-    elif "join tables" in action:
-        # Placeholder for joining tables
-        return "Joining tables..."
-    elif "display message" in action:
-        # Placeholder for displaying a message
-        return "Displaying message..."
+# --- Executor ---
+def execute_action(action_dict):
+    action = action_dict.get("action")
+    params = action_dict.get("parameters")
+
+    if action == "read_table":
+        df = read_table(params)
+        return df
+    elif action == "join_tables":
+        df = join_tables(params.get("table1"), params.get("table2"))
+        return df
+    elif action == "display_message":
+        return display_message(params)
     else:
-        return "Action not recognized."
+        return f"Unknown action: {action}"
 
-# Execute selected tasks
+# --- Run selected tasks ---
 if selected_tasks:
+    st.subheader("Results:")
     for item in selected_tasks:
         no, task = item.split(": ", 1)
         st.write(f"### Task {no}: {task}")
-        action = interpret_task(task)
-        result = execute_action(action)
-        st.write(f"Action: {action}")
-        st.write(f"Result: {result}")
+        action_dict = interpret_task(task)
+        result = execute_action(action_dict)
+        
+        # Display result
+        if isinstance(result, pd.DataFrame):
+            st.dataframe(result)
+        else:
+            st.write(result)
