@@ -1,8 +1,11 @@
 import os
 from openai import OpenAI
 
-# Initialize client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+import streamlit as st
+from openai import OpenAI
+
+# Load API key from Streamlit secrets
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def simple_agent(task):
     prompt = f"""
@@ -24,3 +27,4 @@ def simple_agent(task):
     )
 
     return response.choices[0].message.content
+
