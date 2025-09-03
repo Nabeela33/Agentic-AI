@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-import re
+import openai
+import os
 
-st.title("Dynamic Agentic AI POC - Task Selector")
-
-# Load Excel dynamically
+# Load tasks from Excel
 tasks_df = pd.read_excel("Task List.xlsx")
 task_dict = {row["S.No"]: row["Task"] for idx, row in tasks_df.iterrows()}
 
@@ -15,56 +13,45 @@ selected_tasks = st.multiselect(
     options=[f"{no}: {task}" for no, task in task_dict.items()]
 )
 
-# Example tool functions (can expand later)
-def read_table_from_gcp(table_name):
-    # Placeholder function for reading GCP table
-    return pd.DataFrame({"col1": [1,2,3], "col2": ["a","b","c"]})
+# Set OpenAI API key
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-def join_tables(table1, table2):
-    # Placeholder function for joining tables
-    return pd.DataFrame({"joined_col": [1,2,3]})
-
-def display_message(msg):
-    return msg
-
-# Dynamic interpreter
-def interpret_and_execute(task_text):
+def interpret_task(task_description):
     """
-    Decide the operation based on the task description.
-    Currently uses basic keyword parsing. 
-    Can be replaced with LLM later.
+    Use GPT-5-mini to interpret the task description and determine the required action.
     """
-    task_lower = task_text.lower()
-    results = []
+    prompt = f"Interpret the following task description and determine the required action:\n\n{task_description}\n\nAction:"
+    response = openai.Completion.create(
+        model="gpt-5-mini",
+        prompt=prompt,
+        temperature=0,
+        max_tokens=100
+    )
+    action = response.choices[0].text.strip()
+    return action
 
-    # Detect GCP table read
-    if "read table" in task_lower or "retrieve" in task_lower:
-        table_name = task_text.split()[-1]  # simple example
-        df = read_table_from_gcp(table_name)
-        results.append(df)
-
-    # Detect join
-    elif "join" in task_lower:
-        results.append(join_tables("table1","table2"))
-
-    # Detect display message
-    elif "display" in task_lower or "message" in task_lower:
-        results.append(display_message(task_text))
-
+def execute_action(action):
+    """
+    Execute the action determined by GPT-5-mini.
+    """
+    if "read table" in action:
+        # Placeholder for reading a table
+        return "Reading table..."
+    elif "join tables" in action:
+        # Placeholder for joining tables
+        return "Joining tables..."
+    elif "display message" in action:
+        # Placeholder for displaying a message
+        return "Displaying message..."
     else:
-        results.append(f"Task: '{task_text}' - operation not recognized")
+        return "Action not recognized."
 
-    return results
-
-# Execute selected tasks dynamically
+# Execute selected tasks
 if selected_tasks:
-    st.subheader("Results:")
     for item in selected_tasks:
         no, task = item.split(": ", 1)
         st.write(f"### Task {no}: {task}")
-        outputs = interpret_and_execute(task)
-        for out in outputs:
-            if isinstance(out, pd.DataFrame):
-                st.dataframe(out)
-            else:
-                st.write(out)
+        action = interpret_task(task)
+        result = execute_action(action)
+        st.write(f"Action: {action}")
+        st.write(f"Result: {result}")
