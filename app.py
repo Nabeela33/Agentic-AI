@@ -6,47 +6,50 @@ import re
 # Load tasks from Excel
 tasks_df = pd.read_excel("Task List.xlsx")
 
-st.title("Agentic AI POC")
+st.title("Agentic AI POC - Task Selector")
 
 # Convert tasks to a dictionary
 task_dict = {row["S.No"]: row["Task"] for idx, row in tasks_df.iterrows()}
 
-# Streamlit user prompt
-user_prompt = st.text_input("Enter your instruction for the agent:")
+# Display tasks for selection
+selected_tasks = st.multiselect(
+    "Select the tasks to execute:",
+    options=[f"{no}: {task}" for no, task in task_dict.items()]
+)
 
-def simple_agent(prompt, tasks):
+def execute_task(task_text):
     """
-    Map user prompt to Excel tasks dynamically.
+    Executes a task based on its text.
     """
-    prompt = prompt.lower()
+    task_lower = task_text.lower()
     results = []
 
-    for task_no, task_text in tasks.items():
-        task_lower = task_text.lower()
-
-        # Match keywords dynamically
-        if any(k in prompt for k in ["hello", "greet"]) and "hello" in task_lower:
-            results.append(f"Task {task_no}: Hello World!")
-        elif any(k in prompt for k in ["time", "timestamp"]) and "timestamp" in task_lower:
-            results.append(f"Task {task_no}: Current Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        elif any(k in prompt for k in ["10 times 10", "calculate 10*10"]) and "10 times 10" in task_lower:
-            results.append(f"Task {task_no}: 10 times 10 = {10*10}")
-        # Generic math detection using regex
-        elif re.search(r"\d+\s*[\+\-\*/]\s*\d+", prompt):
-            expression = re.search(r"\d+\s*[\+\-\*/]\s*\d+", prompt).group()
-            try:
-                result = eval(expression)
-                results.append(f"Task {task_no}: {expression} = {result}")
-            except:
-                results.append(f"Task {task_no}: Could not evaluate {expression}")
-        else:
-            results.append(f"Task {task_no}: Task '{task_text}' skipped (no match)")
+    if "hello" in task_lower:
+        results.append("Hello World!")
+    elif "timestamp" in task_lower:
+        results.append(f"Current Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    elif "10 times 10" in task_lower:
+        results.append(f"10 times 10 = {10*10}")
+    # Generic math detection using regex
+    elif re.search(r"\d+\s*[\+\-\*/]\s*\d+", task_lower):
+        expression = re.search(r"\d+\s*[\+\-\*/]\s*\d+", task_lower).group()
+        try:
+            result = eval(expression)
+            results.append(f"{expression} = {result}")
+        except:
+            results.append(f"Could not evaluate {expression}")
+    else:
+        results.append(f"Task '{task_text}' not recognized.")
 
     return results
 
-if user_prompt:
-    output_results = simple_agent(user_prompt, task_dict)
-    for res in output_results:
-        st.write(res)
-
-
+# Execute selected tasks
+if selected_tasks:
+    st.subheader("Results:")
+    for item in selected_tasks:
+        no, task = item.split(": ", 1)
+        task_no = int(no)
+        st.write(f"### Task {task_no}: {task}")
+        output = execute_task(task)
+        for res in output:
+            st.write(res)
