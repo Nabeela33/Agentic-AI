@@ -6,7 +6,7 @@ import re
 # Load tasks from Excel
 tasks_df = pd.read_excel("Task List.xlsx")
 
-st.title("Dynamic Agentic AI POC (No OpenAI)")
+st.title("Agentic AI POC")
 
 # Convert tasks to a dictionary
 task_dict = {row["S.No"]: row["Task"] for idx, row in tasks_df.iterrows()}
@@ -48,4 +48,5 @@ if user_prompt:
     output_results = simple_agent(user_prompt, task_dict)
     for res in output_results:
         st.write(res)
+
 
